@@ -1,5 +1,6 @@
 import { Db, MongoClient } from "mongodb"
 import Main from "../main"
+import {Snowflake} from "discord-api-types/globals";
 
 export default class Mongo {
     private mongo!: Db
@@ -13,4 +14,19 @@ export default class Mongo {
         this.mongo = client.db(this.main.config.mongo.database)
         console.info(`Connected to Database ${this.mongo.databaseName}`)
     }
+
+    async fetchMessageRoles(message_url: string): Promise<Record<string, Snowflake>> {
+        return this.mongo.collection("reaction_roles")
+            .findOne({ url: message_url })
+            .then((doc) => doc?.roles || {});
+    }
+
+    async updateMessageRoles(message_url: string, roles: Record<string, Snowflake>): Promise<void> {
+        return void this.mongo.collection("reaction_roles")
+            .updateOne(
+                { url: message_url },
+                { $set: { roles: roles } },
+                { upsert: true });
+    }
+
 }

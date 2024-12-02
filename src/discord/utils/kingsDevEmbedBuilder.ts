@@ -11,4 +11,8 @@ export default class KingsDevEmbedBuilder extends EmbedBuilder {
         this.setTimestamp(new Date());
     }
 
+    addField(name: string, value: string, inline = false): this {
+        return super.addFields({ name, value, inline });
+    }
+
 }
