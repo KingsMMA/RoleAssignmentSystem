@@ -4,5 +4,4 @@ import Main from "./main/main";
     await new Main().initialize();
 })().catch(error => {
     console.error(error);
-    process.exit(1);
 })
