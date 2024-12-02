@@ -62,6 +62,19 @@ export default class ReactionRoleCommand extends BaseCommand {
                             autocomplete: true,
                         },
                     ]
+                },
+                {
+                    name: 'fix-reactions',
+                    description: 'Ensure the bot has reacted to a message with all the reaction roles.',
+                    type: ApplicationCommandOptionType.Subcommand,
+                    options: [
+                        {
+                            name: "message-url",
+                            description: "The URL of the message to fix the reactions for.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                    ]
                 }
             ]
         })
@@ -74,6 +87,8 @@ export default class ReactionRoleCommand extends BaseCommand {
                 return this.createReactionRole(interaction);
             case "remove":
                 return this.removeReactionRole(interaction);
+            case "fix-reactions":
+                return this.fixReactions(interaction);
             default:
                 return interaction.replyError("Invalid subcommand.");
         }
@@ -181,6 +196,41 @@ export default class ReactionRoleCommand extends BaseCommand {
             .setDescription(`The reaction role has been removed from [this message](${message.url}).`)
             .addField("Role", `<@&${previousRole}>`, true)
             .addField("Emoji", emoji, true)
+            .setColor("Green");
+        await interaction.editReply({ embeds: [embed] });
+    }
+
+    async fixReactions(interaction: ChatInputCommandInteraction) {
+        const url = interaction.options.getString("message-url", true);
+
+        // URL validation
+        if (!/https?:\/\/(.+?\.)?discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/.test(url.trim()))
+            return interaction.replyError("Invalid message URL.");
+
+        const [ guild_id, channel_id, message_id ] = url.trim().split("/").slice(-3);
+        if (guild_id !== interaction.guildId)
+            return interaction.replyError("The message must be in this server.");
+
+        const channel = await interaction.guild!.channels.fetch(channel_id) as GuildTextBasedChannel | undefined;
+        if (!channel)
+            return interaction.replyError("The message's channel could not be found.");
+
+        const message = await channel.messages.fetch(message_id)
+            .catch(() => undefined);
+        if (!message)
+            return interaction.replyError("The message could not be found.");
+
+        const roles = await this.client.main.mongo.fetchMessageRoles(message.url);
+        for (const emoji in roles) {
+            if (!message.reactions.cache.has(emoji)) {
+                await message.react(emoji)
+                    .catch(() => undefined);
+            }
+        }
+
+        const embed = new KingsDevEmbedBuilder()
+            .setTitle("Reactions Fixed")
+            .setDescription(`The bot has reacted to the message with all the reaction roles.`)
             .setColor("Green");
         await interaction.editReply({ embeds: [embed] });
     }
