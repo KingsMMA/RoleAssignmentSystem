@@ -5,12 +5,14 @@ import Mongo from "./util/mongo"
 import * as fs from "fs"
 import * as dotenv from "dotenv"
 import * as path from "path"
+import loggerInitialisedMessage from "../discord/utils/typeEdit";
 
 export default class Main {
     mongo: Mongo
     client!: RoleBot
 
     constructor() {
+        console.log(loggerInitialisedMessage);
         this.mongo = new Mongo(this)
     }
 
