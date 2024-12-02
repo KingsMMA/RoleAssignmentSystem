@@ -21,7 +21,12 @@ export default class {
                 })
             }
 
-            return command.execute(interaction)
+            try {
+                return command.execute(interaction)
+            } catch (e) {
+                console.error(e)
+                return interaction.replyError('An error occurred while executing this command.');
+            }
         } else if (interaction.isAutocomplete()) {
             const command = this.client.commands.get(interaction.commandName)
             if (!command) return
