@@ -55,4 +55,14 @@ export default class Mongo {
                 { upsert: true });
     }
 
+    async fetchAllAvailableRoles(guild_id: Snowflake): Promise<Snowflake[]> {
+        return this.mongo.collection("reaction_roles")
+            .find({
+                url: { $regex: guild_id }
+            }).map((doc) => Object.values(doc.roles) as Snowflake[])
+            .toArray()
+            .then((roles) => roles.flat())
+            .then((roles) => [...new Set(roles)]);
+    }
+
 }
