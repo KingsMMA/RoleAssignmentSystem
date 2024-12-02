@@ -43,6 +43,26 @@ export default class CreateReactionRoleCommand extends BaseCommand {
                         },
                     ]
                 },
+                {
+                    name: 'remove',
+                    description: 'Remove a reaction role',
+                    type: ApplicationCommandOptionType.Subcommand,
+                    options: [
+                        {
+                            name: "message-url",
+                            description: "The URL of the message to remove the reaction role from.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                        {
+                            name: "emoji",
+                            description: "The emoji to remove.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                            autocomplete: true,
+                        },
+                    ]
+                }
             ]
         })
     }
@@ -52,6 +72,8 @@ export default class CreateReactionRoleCommand extends BaseCommand {
         switch (interaction.options.getSubcommand()) {
             case "create":
                 return this.createReactionRole(interaction);
+            case "remove":
+                return this.removeReactionRole(interaction);
             default:
                 return interaction.replyError("Invalid subcommand.");
         }
@@ -118,6 +140,65 @@ export default class CreateReactionRoleCommand extends BaseCommand {
             .addField("Emoji", emoji, true)
             .setColor("Green");
         await interaction.editReply({ embeds: [embed] });
+    }
+
+    async removeReactionRole(interaction: ChatInputCommandInteraction) {
+        const url = interaction.options.getString("message-url", true);
+        const emoji = interaction.options.getString("emoji", true);
+
+        // URL validation
+        if (!/https?:\/\/(.+?\.)?discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/.test(url.trim()))
+            return interaction.replyError("Invalid message URL.");
+
+        const [ guild_id, channel_id, message_id ] = url.trim().split("/").slice(-3);
+        if (guild_id !== interaction.guildId)
+            return interaction.replyError("The message must be in this server.");
+
+        const channel = await interaction.guild!.channels.fetch(channel_id) as GuildTextBasedChannel | undefined;
+        if (!channel)
+            return interaction.replyError("The message's channel could not be found.");
+
+        const message = await channel.messages.fetch(message_id)
+            .catch(() => undefined);
+        if (!message)
+            return interaction.replyError("The message could not be found.");
+
+        const roles = await this.client.main.mongo.fetchMessageRoles(message.url);
+        if (!roles[emoji])
+            return interaction.replyError("This emoji is not used as a reaction role on this message.");
+
+        let response = await message.reactions.cache.find(r => r.emoji.name === emoji)?.users.remove(this.client.user!.id)
+            .catch(() => undefined);
+        if (!response)
+            return interaction.replyError("The bot could not remove the reaction.  Double check the emoji you provided and the bot's permissions in the targeted channel");
+
+        let previousRole = roles[emoji];
+        delete roles[emoji];
+        await this.client.main.mongo.updateMessageRoles(message.url, roles);
+
+        const embed = new KingsDevEmbedBuilder()
+            .setTitle("Reaction Role Removed")
+            .setDescription(`The reaction role has been removed from [this message](${message.url}).`)
+            .addField("Role", `<@&${previousRole}>`, true)
+            .addField("Emoji", emoji, true)
+            .setColor("Green");
+        await interaction.editReply({ embeds: [embed] });
+    }
+
+    async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+        if (interaction.options.getSubcommand() === "remove") {
+            const url = interaction.options.getString("message-url", true);
+            const roles = await this.client.main.mongo.fetchMessageRoles(url);
+            return interaction.respond(
+                Object.keys(roles)
+                    .map(emoji => ({
+                        name: emoji,
+                        value: emoji,
+                    }))
+            );
+        }
+
+        return interaction.respond([]);
     }
 
 }
