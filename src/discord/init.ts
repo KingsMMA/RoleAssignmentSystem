@@ -3,7 +3,8 @@ import path from "path"
 import klaw from "klaw"
 import Main from "../main/main"
 import axios from "axios"
-import { GatewayIntentBits } from "discord-api-types/v10"
+import {GatewayIntentBits} from "discord-api-types/v10"
+import {Partials} from "discord.js";
 
 export const init = async (main: Main) => {
     const client = new RoleBot(main, {
@@ -26,7 +27,8 @@ export const init = async (main: Main) => {
         allowedMentions: {
             parse: ["users", "roles"]
         },
-        shards: "auto"
+        shards: "auto",
+        partials: [Partials.Message, Partials.Channel, Partials.Reaction]
     })
 
     klaw(`${__dirname}/commands`).on("data", file => {

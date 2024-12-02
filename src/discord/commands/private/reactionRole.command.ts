@@ -355,10 +355,8 @@ export default class ReactionRoleCommand extends BaseCommand {
 
         const roles = await this.client.main.mongo.fetchMessageRoles(message.url);
         for (const emoji in roles) {
-            if (!message.reactions.cache.has(emoji)) {
-                await message.react(emoji)
-                    .catch(() => undefined);
-            }
+            await message.react(emoji)
+                .catch(() => undefined);
         }
 
         const embed = new KingsDevEmbedBuilder()
