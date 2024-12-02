@@ -29,6 +29,14 @@ export default class Mongo {
             .then((doc) => doc?.panels[message_url.replace(/\./g, '[D]')] || null);
     }
 
+    async updatePanel(guild_id: Snowflake, message_url: string, title: string, description: string): Promise<void> {
+        return void this.mongo.collection("panels")
+            .updateOne(
+                { guild_id: guild_id },
+                { $set: { [`panels.${message_url.replace(/\./g, '[D]')}`]: { title, description } } },
+                { upsert: true });
+    }
+
     async fetchMessageRoles(message_url: string): Promise<Record<string, Snowflake>> {
         return this.mongo.collection("reaction_roles")
             .findOne({ url: message_url })

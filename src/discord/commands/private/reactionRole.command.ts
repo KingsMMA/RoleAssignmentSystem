@@ -21,24 +21,24 @@ export default class ReactionRoleCommand extends BaseCommand {
             options: [
                 {
                     name: 'create',
-                    description: 'Create a reaction role message',
+                    description: 'Create a reaction role panel.',
                     type: ApplicationCommandOptionType.Subcommand,
                     options: [
                         {
                             name: "title",
-                            description: "The title of the message.",
+                            description: "The title of the panel.",
                             type: ApplicationCommandOptionType.String,
                             required: true,
                         },
                         {
                             name: "description",
-                            description: "The description of the message.",
+                            description: "The description of the panel.",
                             type: ApplicationCommandOptionType.String,
                             required: true,
                         },
                         {
                             name: "channel",
-                            description: "The channel to send the message to.",
+                            description: "The channel to send the panel to.",
                             type: ApplicationCommandOptionType.Channel,
                             required: false,
                         },
@@ -90,6 +90,31 @@ export default class ReactionRoleCommand extends BaseCommand {
                     ]
                 },
                 {
+                    name: 'edit',
+                    description: 'Edit a reaction role panel.',
+                    type: ApplicationCommandOptionType.Subcommand,
+                    options: [
+                        {
+                            name: "message-url",
+                            description: "The URL of the message to fix the reactions for.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                        {
+                            name: "title",
+                            description: "The new title of the panel.",
+                            type: ApplicationCommandOptionType.String,
+                            required: false,
+                        },
+                        {
+                            name: "description",
+                            description: "The new description of the panel.",
+                            type: ApplicationCommandOptionType.String,
+                            required: false,
+                        },
+                    ]
+                },
+                {
                     name: 'fix-reactions',
                     description: 'Ensure the bot has reacted to a message with all the reaction roles.',
                     type: ApplicationCommandOptionType.Subcommand,
@@ -115,6 +140,8 @@ export default class ReactionRoleCommand extends BaseCommand {
                 return this.addReactionRole(interaction);
             case "remove":
                 return this.removeReactionRole(interaction);
+            case "edit":
+                return this.editReactionRolePanel(interaction);
             case "fix-reactions":
                 return this.fixReactions(interaction);
             default:
@@ -257,6 +284,51 @@ export default class ReactionRoleCommand extends BaseCommand {
             .setDescription(`The reaction role has been removed from [this message](${message.url}).`)
             .addField("Role", `<@&${previousRole}>`, true)
             .addField("Emoji", emoji, true)
+            .setColor("Green");
+        await interaction.editReply({ embeds: [embed] });
+    }
+
+    async editReactionRolePanel(interaction: ChatInputCommandInteraction) {
+        const url = interaction.options.getString("message-url", true);
+        const title = interaction.options.getString("title");
+        const description = interaction.options.getString("description");
+
+        // URL validation
+        if (!/https?:\/\/(.+?\.)?discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/.test(url.trim()))
+            return interaction.replyError("Invalid message URL.");
+
+        const [ guild_id, channel_id, message_id ] = url.trim().split("/").slice(-3);
+        if (guild_id !== interaction.guildId)
+            return interaction.replyError("The message must be in this server.");
+
+        const channel = await interaction.guild!.channels.fetch(channel_id) as GuildTextBasedChannel | undefined;
+        if (!channel)
+            return interaction.replyError("The message's channel could not be found.");
+
+        const message = await channel.messages.fetch(message_id)
+            .catch(() => undefined);
+        if (!message)
+            return interaction.replyError("The message could not be found.");
+
+        const panel = await this.client.main.mongo.fetchPanel(interaction.guild!.id, message.url);
+        if (!panel)
+            return interaction.replyError("The panel could not be found.");
+
+        if (!title && !description)
+            return interaction.replyError("You must provide a new title, a new description, or both.");
+
+        if (title)
+            panel.title = title;
+        if (description)
+            panel.description = description;
+
+        await this.client.main.mongo.updatePanel(interaction.guild!.id, message.url, panel.title, panel.description);
+
+        await this.updatePanelMessage(message, await this.client.main.mongo.fetchMessageRoles(message.url));
+
+        const embed = new KingsDevEmbedBuilder()
+            .setTitle("Reaction Role Panel Edited")
+            .setDescription(`The reaction role panel has been edited.`)
             .setColor("Green");
         await interaction.editReply({ embeds: [embed] });
     }
