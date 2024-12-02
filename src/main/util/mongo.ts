@@ -55,6 +55,13 @@ export default class Mongo {
                 { upsert: true });
     }
 
+    async fetchReactionMessages(guild_id: Snowflake): Promise<{ url: string, roles: Record<string, Snowflake> }[]> {
+        return await this.mongo.collection("reaction_roles")
+            .find({
+                url: { $regex: guild_id }
+            }).toArray() as unknown as Promise<{ url: string, roles: Record<string, Snowflake> }[]>;
+    }
+
     async fetchAllAvailableRoles(guild_id: Snowflake): Promise<Snowflake[]> {
         return this.mongo.collection("reaction_roles")
             .find({

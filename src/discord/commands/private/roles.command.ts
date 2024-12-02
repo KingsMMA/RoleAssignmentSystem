@@ -70,7 +70,32 @@ export default class RolesCommand extends BaseCommand {
     }
 
     async viewAvailable(interaction: ChatInputCommandInteraction) {
+        const available = await this.client.main.mongo.fetchReactionMessages(interaction.guildId!);
 
+        if (available.length === 0) return interaction.editReply({
+            embeds: [
+                new KingsDevEmbedBuilder()
+                    .setTitle("Available Reaction Roles")
+                    .setDescription("There are no available reaction roles.")
+                    .setColor('Blurple')
+            ]
+        });
+
+        let availableRoles = await this.client.main.mongo.fetchAllAvailableRoles(interaction.guildId!);
+        availableRoles = availableRoles.filter((role, index) => availableRoles.indexOf(role) === index);
+
+        return interaction.editReply({
+            embeds: [
+                new KingsDevEmbedBuilder()
+                    .setTitle("Available Reaction Roles")
+                    .setDescription(`There are ${availableRoles.length} available reaction role${availableRoles.length === 1 ? '' : 's'
+                    } across ${available.length} reaction role message${available.length === 1 ? '' : 's'
+                    }.\n\n${available.map(message => `• [Jump to Message](${message.url})\n${
+                        Object.entries(message.roles).map(([emoji, role]) => `${emoji}: <@&${role}>`).join('\n')
+                    }`).join('\n\n')}`)
+                    .setColor('Blurple')
+            ]
+        });
     }
 
 }
