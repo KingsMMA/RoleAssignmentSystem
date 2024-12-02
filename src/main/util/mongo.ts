@@ -22,6 +22,10 @@ export default class Mongo {
     }
 
     async updateMessageRoles(message_url: string, roles: Record<string, Snowflake>): Promise<void> {
+        if (Object.keys(roles).length === 0)
+            return void this.mongo.collection("reaction_roles")
+                .deleteOne({ url: message_url });
+
         return void this.mongo.collection("reaction_roles")
             .updateOne(
                 { url: message_url },
