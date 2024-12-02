@@ -91,7 +91,7 @@ export default class CreateReactionRoleCommand extends BaseCommand {
         let reaction = await message.react(emoji)
             .catch(() => undefined);
         if (!reaction)
-            return interaction.replyError("The bot could not react with this emoji.");
+            return interaction.replyError("The bot could not react with this emoji.  Double check the emoji you provided and the bot's permissions in the targeted channel.");
 
         roles[emoji] = role.id;
         await this.client.main.mongo.updateMessageRoles(message.url, roles);
