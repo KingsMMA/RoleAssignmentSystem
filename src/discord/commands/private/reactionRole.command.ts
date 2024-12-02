@@ -19,8 +19,8 @@ export default class ReactionRoleCommand extends BaseCommand {
                 PermissionsBitField.Flags.ManageRoles.toString(),
             options: [
                 {
-                    name: 'create',
-                    description: 'Create a reaction role',
+                    name: 'add',
+                    description: 'Add a reaction role to a message',
                     type: ApplicationCommandOptionType.Subcommand,
                     options: [
                         {
@@ -83,8 +83,8 @@ export default class ReactionRoleCommand extends BaseCommand {
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
         switch (interaction.options.getSubcommand()) {
-            case "create":
-                return this.createReactionRole(interaction);
+            case "add":
+                return this.addReactionRole(interaction);
             case "remove":
                 return this.removeReactionRole(interaction);
             case "fix-reactions":
@@ -94,7 +94,7 @@ export default class ReactionRoleCommand extends BaseCommand {
         }
     }
 
-    async createReactionRole(interaction: ChatInputCommandInteraction) {
+    async addReactionRole(interaction: ChatInputCommandInteraction) {
         const url = interaction.options.getString("message-url", true);
         let role: Role | APIRole | null = interaction.options.getRole("role", true);
         const emoji = interaction.options.getString("emoji", true);
