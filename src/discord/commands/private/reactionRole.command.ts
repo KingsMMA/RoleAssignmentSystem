@@ -3,11 +3,12 @@ import RoleBot from "../../roleBot"
 import {ApplicationCommandType, ApplicationCommandOptionType, APIRole} from "discord-api-types/v10"
 import {
     AutocompleteInteraction,
-    ChatInputCommandInteraction, GuildTextBasedChannel,
+    ChatInputCommandInteraction, GuildTextBasedChannel, Message,
     PermissionOverwrites,
     PermissionsBitField, Role
 } from "discord.js"
 import KingsDevEmbedBuilder from "../../utils/kingsDevEmbedBuilder";
+import {Snowflake} from "discord-api-types/globals";
 
 export default class ReactionRoleCommand extends BaseCommand {
     constructor(client: RoleBot) {
@@ -18,6 +19,31 @@ export default class ReactionRoleCommand extends BaseCommand {
             default_member_permissions:
                 PermissionsBitField.Flags.ManageRoles.toString(),
             options: [
+                {
+                    name: 'create',
+                    description: 'Create a reaction role message',
+                    type: ApplicationCommandOptionType.Subcommand,
+                    options: [
+                        {
+                            name: "title",
+                            description: "The title of the message.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                        {
+                            name: "description",
+                            description: "The description of the message.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                        {
+                            name: "channel",
+                            description: "The channel to send the message to.",
+                            type: ApplicationCommandOptionType.Channel,
+                            required: false,
+                        },
+                    ]
+                },
                 {
                     name: 'add',
                     description: 'Add a reaction role to a message',
@@ -83,6 +109,8 @@ export default class ReactionRoleCommand extends BaseCommand {
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
         switch (interaction.options.getSubcommand()) {
+            case "create":
+                return this.createReactionRoleMessage(interaction);
             case "add":
                 return this.addReactionRole(interaction);
             case "remove":
@@ -92,6 +120,35 @@ export default class ReactionRoleCommand extends BaseCommand {
             default:
                 return interaction.replyError("Invalid subcommand.");
         }
+    }
+
+    async createReactionRoleMessage(interaction: ChatInputCommandInteraction) {
+        const title = interaction.options.getString("title", true);
+        const description = interaction.options.getString("description", true);
+        const channelOption = interaction.options.getChannel("channel") || interaction.channel!;
+
+        let channel = await interaction.guild!.channels.fetch(channelOption.id);
+        if (!channel)
+            return interaction.replyError("The channel could not be found.");
+        if (!channel.isTextBased() || channel.isVoiceBased())
+            return interaction.replyError("The channel must be a text channel.");
+
+        const embed = new KingsDevEmbedBuilder()
+            .setTitle(title)
+            .setDescription(description + "\n\nNo reaction roles have been added to this message.")
+            .setColor("Blurple");
+        const message = await channel.send({ embeds: [embed] })
+            .catch(() => undefined);
+        if (!message)
+            return interaction.replyError("The bot could not send the message.  Double check the bot's permissions in the targeted channel.");
+
+        await this.client.main.mongo.createNewPanel(interaction.guild!.id, message.url, title, description);
+
+        const successEmbed = new KingsDevEmbedBuilder()
+            .setTitle("Reaction Role Message Created")
+            .setDescription(`The reaction role message has been created in <#${channel.id}>: [Jump to message](${message.url})\n\nYou can now add reaction roles to this message with the \`/reaction-role add\` command.`)
+            .setColor("Green");
+        await interaction.editReply({ embeds: [successEmbed] });
     }
 
     async addReactionRole(interaction: ChatInputCommandInteraction) {
@@ -148,6 +205,8 @@ export default class ReactionRoleCommand extends BaseCommand {
         roles[emoji] = role.id;
         await this.client.main.mongo.updateMessageRoles(message.url, roles);
 
+        await this.updatePanelMessage(message, roles);
+
         const embed = new KingsDevEmbedBuilder()
             .setTitle("Reaction Role Added")
             .setDescription(`The reaction role has been added to [this message](${message.url}).`)
@@ -191,6 +250,8 @@ export default class ReactionRoleCommand extends BaseCommand {
         delete roles[emoji];
         await this.client.main.mongo.updateMessageRoles(message.url, roles);
 
+        await this.updatePanelMessage(message, roles);
+
         const embed = new KingsDevEmbedBuilder()
             .setTitle("Reaction Role Removed")
             .setDescription(`The reaction role has been removed from [this message](${message.url}).`)
@@ -233,6 +294,29 @@ export default class ReactionRoleCommand extends BaseCommand {
             .setDescription(`The bot has reacted to the message with all the reaction roles.`)
             .setColor("Green");
         await interaction.editReply({ embeds: [embed] });
+    }
+
+    async updatePanelMessage(message: Message, roles: Record<string, Snowflake>): Promise<void> {
+        const panel = await this.client.main.mongo.fetchPanel(message.guild!.id, message.url);
+        if (!panel)
+            return;
+
+        let rolesText: string;
+        if (Object.keys(roles).length === 0) {
+            rolesText = "No reaction roles have been added to this message.";
+        } else {
+            rolesText = Object.keys(roles)
+                .map(emoji => `${emoji} <@&${roles[emoji]}>`)
+                .join("\n");
+        }
+
+        const embed = new KingsDevEmbedBuilder()
+            .setTitle(panel.title)
+            .setDescription(`${panel.description}\n\n${rolesText}`)
+            .setColor("Blurple");
+
+        return void await message.edit({ embeds: [embed] })
+            .catch(() => undefined);
     }
 
     async autocomplete(interaction: AutocompleteInteraction): Promise<void> {

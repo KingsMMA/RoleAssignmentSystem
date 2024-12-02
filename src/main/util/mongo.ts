@@ -15,6 +15,20 @@ export default class Mongo {
         console.info(`Connected to Database ${this.mongo.databaseName}`)
     }
 
+    async createNewPanel(guild_id: Snowflake, message_url: string, title: string, description: string): Promise<void> {
+        return void this.mongo.collection("panels")
+            .updateOne(
+                { guild_id: guild_id },
+                { $set: { [`panels.${message_url.replace(/\./g, '[D]')}`]: { title, description } } },
+                { upsert: true });
+    }
+
+    async fetchPanel(guild_id: Snowflake, message_url: string): Promise<{ title: string, description: string } | null> {
+        return this.mongo.collection("panels")
+            .findOne({ guild_id: guild_id })
+            .then((doc) => doc?.panels[message_url.replace(/\./g, '[D]')] || null);
+    }
+
     async fetchMessageRoles(message_url: string): Promise<Record<string, Snowflake>> {
         return this.mongo.collection("reaction_roles")
             .findOne({ url: message_url })
