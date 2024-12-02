@@ -1,6 +1,6 @@
-import {EmbedBuilder} from "discord.js";
+import { EmbedBuilder } from "discord.js";
 
-export default class EmbedBuilder extends EmbedBuilder {
+export default class KingsDevEmbedBuilder extends EmbedBuilder {
 
     constructor() {
         super();

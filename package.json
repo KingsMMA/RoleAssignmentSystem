@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npm run build && node dist/index.js",
     "build": "npm run clean && tsc -p tsconfig.json",
-    "clean": "del dist -R",
+    "clean": "del /F /Q dist",
     "watch": "tsc -p tsconfig.json -w",
     "lint": "eslint --ext .ts ./src",
     "lint:fix": "eslint --fix --ext .ts ./src",
