@@ -29,10 +29,10 @@ export default class HelpCommand extends BaseCommand {
     }
 
     async execute(interaction: ChatInputCommandInteraction) {
-        const command = interaction.options.getString("command")
+        const command = interaction.options.getString("command");
 
         if (command) {
-            const cmd = this.client.commands.get(command)
+            const cmd = this.client.commands.get(command);
             if (!cmd) {
                 return interaction.reply({
                     embeds: [
@@ -41,7 +41,7 @@ export default class HelpCommand extends BaseCommand {
                             .setDescription(`The command \`${command}\` was not found.`)
                             .setColor(0xff0000)
                     ]
-                })
+                });
             }
 
             return interaction.reply({
@@ -69,7 +69,7 @@ export default class HelpCommand extends BaseCommand {
                             : [])
                         .setColor(0x006994)
                 ]
-            })
+            });
         }
 
         return interaction.reply({
@@ -88,7 +88,7 @@ export default class HelpCommand extends BaseCommand {
                     ])
                     .setColor(0x006994),
             ]
-        })
+        });
     }
 
     autocomplete(interaction: AutocompleteInteraction) {
@@ -100,9 +100,9 @@ export default class HelpCommand extends BaseCommand {
                         value: command.name
                     }
                 })
-            )
+            );
         }
 
-        return interaction.respond([])
+        return interaction.respond([]);
     }
 }
