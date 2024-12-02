@@ -48,6 +48,9 @@ importers:
       '@types/klaw':
         specifier: ^3.0.3
         version: 3.0.6
+      '@types/node':
+        specifier: ^22.10.1
+        version: 22.10.1
       typescript:
         specifier: ^5.3.3
         version: 5.7.2
