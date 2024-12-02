@@ -9,7 +9,7 @@ import {
 } from "discord.js"
 import KingsDevEmbedBuilder from "../../utils/kingsDevEmbedBuilder";
 
-export default class CreateReactionRoleCommand extends BaseCommand {
+export default class ReactionRoleCommand extends BaseCommand {
     constructor(client: RoleBot) {
         super(client, {
             name: "reaction-role",
