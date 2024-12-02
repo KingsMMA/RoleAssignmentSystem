@@ -12,29 +12,36 @@ import KingsDevEmbedBuilder from "../../utils/kingsDevEmbedBuilder";
 export default class CreateReactionRoleCommand extends BaseCommand {
     constructor(client: RoleBot) {
         super(client, {
-            name: "create-reaction-role",
-            description: "Add a reaction role to a message.",
+            name: "reaction-role",
+            description: "Manages reaction roles.",
             type: ApplicationCommandType.ChatInput,
             default_member_permissions:
                 PermissionsBitField.Flags.ManageRoles.toString(),
             options: [
                 {
-                    name: "message-url",
-                    description: "The URL of the message to add the reaction role to.",
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
-                },
-                {
-                    name: "role",
-                    description: "The role to add.",
-                    type: ApplicationCommandOptionType.Role,
-                    required: true,
-                },
-                {
-                    name: "emoji",
-                    description: "The emoji to react with.",
-                    type: ApplicationCommandOptionType.String,
-                    required: true,
+                    name: 'create',
+                    description: 'Create a reaction role',
+                    type: ApplicationCommandOptionType.Subcommand,
+                    options: [
+                        {
+                            name: "message-url",
+                            description: "The URL of the message to add the reaction role to.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                        {
+                            name: "role",
+                            description: "The role to add.",
+                            type: ApplicationCommandOptionType.Role,
+                            required: true,
+                        },
+                        {
+                            name: "emoji",
+                            description: "The emoji to react with.",
+                            type: ApplicationCommandOptionType.String,
+                            required: true,
+                        },
+                    ]
                 },
             ]
         })
@@ -42,7 +49,15 @@ export default class CreateReactionRoleCommand extends BaseCommand {
 
     async execute(interaction: ChatInputCommandInteraction) {
         await interaction.deferReply();
+        switch (interaction.options.getSubcommand()) {
+            case "create":
+                return this.createReactionRole(interaction);
+            default:
+                return interaction.replyError("Invalid subcommand.");
+        }
+    }
 
+    async createReactionRole(interaction: ChatInputCommandInteraction) {
         const url = interaction.options.getString("message-url", true);
         let role: Role | APIRole | null = interaction.options.getRole("role", true);
         const emoji = interaction.options.getString("emoji", true);
